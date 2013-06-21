@@ -1,0 +1,73 @@
+-- rootのパスワード設定
+set password for root@localhost=password("root");
+
+
+-- dbの作成
+create database nsd99M5a;
+
+-- mysqld 起動
+cd d:
+D:\MySQL\5.0.20\bin\mysqld.exe
+
+-- mysql 起動
+d:
+cd D:\MySQL\5.0.20\bin\
+mysql.exe -u root -p
+root
+
+use nsd99M5a;
+
+-- テーブルの作成
+-- task
+	DROP TABLE IF EXISTS 	tk_task	;				
+		create table 	tk_task	(				
+		id	INT	(10)		NOT NULL		AUTO_INCREMENT
+		,task_name	VARCHAR	(100)		NOT NULL		
+		,dead_line	DATE			NOT NULL		
+		,mile_stone	VARCHAR	(100)		NOT NULL		
+		,project_name	VARCHAR	(100)		NOT NULL		
+		,del_flg	TINYINT(1)			NOT NULL	DEFAULT '0'	
+		,created	DATETIME			NOT NULL	DEFAULT '0000-00-00 00:00:00'	
+		,modified	TIMESTAMP			NOT NULL		
+		,PRIMARY KEY	(id)	
+		);						
+
+
+INSERT INTO 	tk_task	( 	id, task_name, dead_line, mile_stone, project_name, del_flg, created	) VALUES ( 	1, 'テスト仕様書の修正', '2009-10-05', '受け入れテスト', 'J-TES', FALSE, CURRENT_TIMESTAMP	 );
+select * from tk_task;
+	
+-- 	
+
+
+
+
+-- テーブルの作成
+-- 
+use nsd99M5a;						
+DROP TABLE IF EXISTS 	tk_account	;				
+create table 	tk_account	(				
+id	INT	(5)	 ZEROFILL 	NOT NULL		AUTO_INCREMENT
+,login_id	VARCHAR	(20)		NOT NULL		
+,name	VARCHAR	(100)		NOT NULL		
+,passwd	VARCHAR	(32)		NOT NULL		
+,delete_flg	TINYINT			NOT NULL	DEFAULT 0	
+,created	DATETIME			NOT NULL	DEFAULT '0000-00-00 00:00:00'	
+,modified	TIMESTAMP			NOT NULL		
+,PRIMARY KEY	(id				)	
+)						
+
+
+INSERT INTO 	tk_account	( 	id, login_id, name, passwd, delete_flg, created	) VALUES ( 	1, 'ychiba', '千葉ちゃん', 'ychiba123', 0, CURRENT_TIMESTAMP	 );
+INSERT INTO 	tk_account	( 	id, login_id, name, passwd, delete_flg, created	) VALUES ( 	2, 'k', 'shimizu', 'k', 0, CURRENT_TIMESTAMP	 );
+
+select * from 	tk_account	;
+
+
+-- task テーブルの変更
+use nsd99M5a;
+alter table tk_task add memo text after project_name;
+
+-- 確認
+show create table tk_task;
+select * from tk_task;
+

@@ -1,0 +1,160 @@
+<?php
+require_once('./dao/abstract_dao.class.php');
+class qa_dao extends abstract_dao{
+
+    var $con;
+    var $table = "cus_qa";
+
+    public function insert(array $qa){
+        $qa['created'] = $this->con->UserTimeStamp(time(), 'Y-m-d H:i:s');
+        $ret = $this->auto_execute($this->table, $qa,'insert');
+        if(!$ret) {
+             return $ret;
+        }
+        $id = $this->get("SELECT LAST_INSERT_ID() as ID");
+        return $id[0]["id"];
+    }
+
+    /**
+     * レコードを取得する
+     *
+     * @param $qa_dao_id id
+     * @return
+     */
+    public function get_qa($id){
+        $id = (int)$id;
+        $rs = $this->get("SELECT t1.id, t1.title, t1.qu, t1.ans, t1.correct_cnt, t1.uncorrect_cnt, t1.category, t1.src, t1.del_flg, t1.created, t1.modified 
+                           FROM cus_qa as t1 WHERE id = ? ", array($id));
+        if (count($rs) == 0 ) {
+            return array(); 
+        } else {
+            return $rs[0];
+        }
+    }
+
+    /**
+     * @param array $search_cond 検索条件
+     */
+    public function get_qa_list($search_cond = array()){
+        $sql = "SELECT 
+                    t1.id, t1.title, t1.qu, t1.ans, t1.src,  t1.correct_cnt,  t1.uncorrect_cnt,
+					round( t1.correct_cnt /(t1.uncorrect_cnt + t1.correct_cnt) * 100,1) as correct_rate, 
+					t1.category, t1.del_flg, t1.created, t1.modified     
+                FROM cus_qa AS t1
+                WHERE del_flg = 0 ";
+        if(count($search_cond)){
+            foreach($search_cond as $key => &$val){
+                if($key == "title") { 
+                    $val = "%$val%"; 
+                }
+                $sql .= "AND $key like ? ";
+            }
+        }
+        $sql .= " ORDER BY t1.del_flg ASC, correct_rate, t1.modified, t1.created ";
+       // $this->get($sql, $search_cond);
+       // exit;
+       return $this->get($sql, $search_cond);
+    }
+
+    /**
+     * @param $qa 
+     */
+    public function update($qa){
+        $where = "id = $qa[id]";
+        return $this->auto_execute($this->table, $qa, 'UPDATE', $where);
+    }
+
+    /**
+     * 検索語を作成して返します。
+     * @param array $qa_dao レコードテーブルのエンティティ
+     */
+    private function make_search_word(array $qa_dao){
+        $SEARCH_WORD = "";
+        foreach($qa_dao as $val ){
+            $SEARCH_WORD .= $val;
+        }
+        return $SEARCH_WORD;
+    }
+
+    /**
+     * 締切日の一覧を表示する
+     * @param array $search_cond 検索条件
+     */
+    public function get_dead_line_list($search_cond = array()){
+        $sql = "SELECT dead_line ,count(*) as cnt FROM cus_qa
+				WHERE del_flg = 0 GROUP BY dead_line ORDER BY dead_line ";
+        return $this->get($sql);
+    }
+
+    public function get_frequency_list(){
+        $sql = "SELECT T1.FREQUENCY FROM ".qa_dao_dao::TABLE_NAME." AS T1
+                WHERE T1.DEL_FLG = 0 GROUP BY T1.FREQUENCY";
+        return $this->get($sql);
+    }
+
+    /**
+     * 検索条件から、SQL・検索条件を生成して返します。
+     *
+     * @param $sql 
+     * @param $search_cond
+     * @history ver 1.0 real_date_from, toを追加
+     *
+     */
+    private function make_search_cond_where($sql, $search_cond){
+        if( array_key_exists("search_word", $search_cond)){
+            $search_cond[search_word] = '%'.$search_cond[search_word].'%';
+            $sql .= " AND T1.SEARCH_WORD LIKE ? ";
+        }
+        if( array_key_exists("purpose_name", $search_cond)){
+            $search_cond[purpose_name] = '%'.$search_cond[purpose_name];
+            $sql .= " AND T1.PURPOSE_NAME LIKE ? ";
+        }
+        if( array_key_exists("manage_name", $search_cond)){
+            $search_cond[manage_name] = '%'.$search_cond[manage_name];
+            $sql .= " AND T1.MANAGE_NAME LIKE ? ";
+        }
+        if( array_key_exists("real_date_from", $search_cond)){
+            $sql .= " AND T1.REAL_DATE >= ? ";
+        }
+        if( array_key_exists("real_date_to", $search_cond)){
+            $sql .= " AND T1.REAL_DATE <= ? ";
+        }
+       return array('sql'=>$sql, 'search_cond'=>$search_cond);
+    }
+
+    public function delete($qa_dao){
+        return $this->auto_execute($this->table, $qa_dao,'update');
+    }
+
+    public function __coustruct(){
+      echo('construct');
+    }
+
+    public function get_category_list(){
+        $sql = "SELECT qa.category FROM cus_qa AS qa WHERE qa.del_flg = 0 GROUP BY qa.category";
+        return $this->get($sql);
+    }
+    public function get_src_list(){
+        $sql = "SELECT qa.src FROM cus_qa AS qa WHERE qa.del_flg = 0 AND qa.src != '' GROUP BY qa.src";
+        return $this->get($sql);
+    }
+    public function get_latest_src(){
+        $sql = "SELECT qa.src FROM cus_qa AS qa WHERE qa.del_flg = 0 group by qa.src, qa.created having qa.created = max(qa.created) limit 1";
+        $ret = $this->get($sql);
+        return $ret[0]["src"];
+    }
+    public function get_rates_by_category(){
+            return $this->get("select category, avg(correct_cnt / (correct_cnt + uncorrect_cnt)) * 100 as rate, count(*) as count from cus_qa where del_flg = 0 group by category order by rate"); 
+    }
+    public function get_noans_by_category(){
+            return $this->get("select category, count(*) as count from cus_qa where del_flg = 0 and (correct_cnt + uncorrect_cnt) = 0 group by category"); 
+    }
+/*    public function get_rates_by_category(){
+            return $this->get("select a.category as category, a.rate as rate, a.count as count, b.count as count_no_ans
+                               from (select category, avg(correct_cnt / (correct_cnt + uncorrect_cnt)) * 100 as rate, count(*) as count from cus_qa where del_flg = 0 group by category) as a,
+                                    (select category, count(*) as count from cus_qa where del_flg = 0 and (correct_cnt + uncorrect_cnt) = 0 group by category) as b
+                               where a.category = b.category order by a.rate"); 
+    }
+*/
+}
+?>

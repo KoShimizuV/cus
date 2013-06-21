@@ -1,0 +1,38 @@
+<?php /* Smarty version 2.6.18, created on 2010-10-02 16:07:06
+         compiled from pc/qa/regist_init.tpl */ ?>
+<?php $_smarty_tpl_vars = $this->_tpl_vars;
+$this->_smarty_include(array('smarty_include_tpl_file' => "pc/common/inc_header.tpl", 'smarty_include_vars' => array()));
+$this->_tpl_vars = $_smarty_tpl_vars;
+unset($_smarty_tpl_vars);
+ ?>
+<h3>レコードの追加</h3>
+<form method="POST" name="regist_form" action="index.php">
+<input type="hidden" name="c" value="pc">
+<input type="hidden" name="p" value="qa">
+<input type="hidden" name="a" value="regist_do">
+<br/>
+<table>
+    <tr>
+        <th style="width:100px;">title</th>
+        <td style="text-align:left;"><input type="text" name="title" /></td>
+    </tr>
+    <tr>
+        <th>question</th>
+        <td style="text-align:left"><textarea type="text" name="qu"  onkeydown="change_lenght_height(this)" onfocus="change_lenght_height(this)" onBlur="set_length_height(this,300,40)" style="width:300px" ></textarea></td>
+    </tr>
+    <tr>
+        <th>answer</th>
+        <td style="text-align:left"><textarea type="text" name="ans" onkeydown="change_lenght_height(this)" onfocus="change_lenght_height(this)" onBlur="set_length_height(this,300,40)" style="width:300px" ></textarea></td>
+    </tr>
+    <tr>
+        <th>category</th>
+        <td style="text-align:left"><input type="text" name="category" /></td>
+    </tr>
+    <tr>
+        <th></th>
+        <td style="text-align:left">
+            <input type="submit" value="追加">
+        </td>
+    </tr>
+</table>
+</form>

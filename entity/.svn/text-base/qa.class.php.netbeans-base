@@ -1,0 +1,42 @@
+<?php
+class qa{
+
+    private $entity = array();
+
+    public function get_entity(){
+        return $this->entity;
+    }
+
+    public function set_entity(array $request){
+        $asset_spec = array() ;
+        if( array_key_exists("title", $request)){ 
+            $asset_spec[title] = $request[title] ;
+        }
+        if( array_key_exists("qu", $request)){ 
+            $asset_spec[qu] = $request[qu] ;
+        }
+        if( array_key_exists("ans", $request)){ 
+            $asset_spec[ans] = $request[ans] ;
+        }
+        if( array_key_exists("correct_cnt", $request)){ 
+            $asset_spec[correct_cnt] = $request[correct_cnt] ;
+        }
+        if( array_key_exists("uncorrect_cnt", $request)){ 
+            $asset_spec[uncorrect_cnt] = $request[uncorrect_cnt] ;
+        }
+        if( array_key_exists("category", $request)){ 
+            $asset_spec[category] = $request[category] ;
+        }
+
+        // 
+        if( array_key_exists("correct_rate", $request)){ 
+            $asset_spec[correct_rate] = $request[correct_rate] ;
+        }
+        $this->entity = $asset_spec;
+    }
+
+    function __construct(array $request){
+        $this->set_entity($request);
+    }
+}
+?>

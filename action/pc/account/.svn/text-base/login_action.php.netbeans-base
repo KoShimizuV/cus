@@ -1,0 +1,61 @@
+<?php
+    require_once('./action/pc/abstract_action.php');
+    require('./biz/imple/account_manage_facade_imple.class.php');
+    
+    /**
+     * ログインを実行します
+     *
+     */
+    class login_action extends abstract_action{
+    
+        private $account_manage_facade;
+        
+        public function execute($_REQUEST){
+
+            session_name();
+            session_start();
+            
+            $smarty = new kms_smarty();
+
+            // validate
+            // idがないとき
+           if( empty($_REQUEST['login_id']) or empty($_REQUEST['passwd']) ){
+                $smarty->execute('pc/login.tpl', array('error_msg'=>'please enter your name and passwd '));
+                exit;
+            }
+            $res = $this->account_manage_facade->login($_REQUEST['login_id'],$_REQUEST['passwd']);
+
+            if($res == false){
+                $smarty->execute('pc/login.tpl', array('error_msg'=>'wrong id or password'));
+                exit;
+            }
+
+            // ログイン成功時
+            // セッションに保持
+            $_SESSION['account']['login_id'] = $_REQUEST['login_id'];
+            $_SESSION['account']['name'] = $res[0]['name'];
+
+            $smarty->execute('pc/index.tpl');
+            exit;
+        }
+        
+        /**
+         * session状態を確認します
+         */
+        public function session_check($session){
+
+            // validate
+            // id がないとき
+           if( !isset($session['account']['login_id'])){
+
+                $smarty = new kms_smarty();
+                $smarty->execute('pc/login.tpl', array('error_msg'=>'please login'));
+                exit;
+            }
+        }
+            
+        public function __construct(){
+              $this->account_manage_facade = new account_manage_facade_imple();
+        }
+    }
+?>

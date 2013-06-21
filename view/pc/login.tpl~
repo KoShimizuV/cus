@@ -1,0 +1,14 @@
+{include file="pc/common/inc_header.tpl"}
+Welecom
+<div class="error_msg">
+{$error_msg|default:""}
+</div>
+<form action="./index.php" method="POST" >
+id    <input type="text" name="login_id" value="{$smarty.session.account.login_id|default:""}" /><br/>
+password    <input type="password" name="passwd" />
+    <input type="submit" value="Sign In" />
+    <input type="hidden" name="c" value="pc" />
+    <input type="hidden" name="p" value="account" />
+    <input type="hidden" name="a" value="login" />
+</form>
+{include file="pc/common/inc_footer.tpl"}

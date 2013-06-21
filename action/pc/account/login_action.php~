@@ -1,0 +1,50 @@
+<?php
+require_once('./action/pc/abstract_action.php');
+require('./biz/imple/account_manage_facade_imple.class.php');
+require('./biz/imple/qa_manage_facade_imple.class.php');
+class login_action extends abstract_action{
+    private $account_manage_facade;
+    public function execute($_REQUEST){
+        $qa_manage_facade = new qa_manage_facade_imple() ;
+        session_name();
+        session_start();
+        $smarty = new kms_smarty();
+        if (!empty($_SESSION['account']['login_id'])) {
+            $rate_list = $qa_manage_facade->get_rates_by_category();
+            $smarty->execute('pc/index.tpl', array('rate_list' => $rate_list));
+            exit;
+        } 
+        // validate
+        if( empty($_REQUEST['login_id']) or empty($_REQUEST['passwd']) ){
+            $smarty->execute('pc/login.tpl', array('error_msg'=>'please enter your name and passwd '));
+            exit;
+        }
+        $res = $this->account_manage_facade->login($_REQUEST['login_id'],$_REQUEST['passwd']);
+        if($res == false){
+            $smarty->execute('pc/login.tpl', array('error_msg'=>'wrong id or password'));
+            exit;
+        }
+        $_SESSION['account']['login_id'] = $_REQUEST['login_id'];
+        $_SESSION['account']['name'] = $res[0]['name'];
+        $rate_list = $qa_manage_facade->get_rates_by_category();
+        $smarty->execute('pc/index.tpl', array('rate_list' => $rate_list));
+        exit;
+    }
+    
+    /**
+     * session状態を確認します
+     */
+    public function session_check($session){
+        // validate id がないとき
+       if( !isset($session['account']['login_id'])){
+            $smarty = new kms_smarty();
+            $smarty->execute('pc/login.tpl', array('error_msg'=>'please login'));
+            exit;
+        }
+    }
+        
+    public function __construct(){
+        $this->account_manage_facade = new account_manage_facade_imple();
+    }
+}
+?>

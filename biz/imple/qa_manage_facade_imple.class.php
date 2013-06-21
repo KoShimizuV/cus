@@ -1,0 +1,193 @@
+<?php
+require('./biz/qa_manage_facade.interface.php');
+require('./dao/qa_dao.class.php');
+require('./dao/link_dao.class.php');
+require('./dao/tag_dao.class.php');
+require('./dao/qa_tag_dao.class.php');
+require('./biz/cmd/imple/file_cmd_imple.class.php');
+
+class qa_manage_facade_imple implements qa_manage_facade{
+
+    private $qa_dao;
+    private $link_dao;
+    
+    public function update($qa){
+        // print_r($qa);exit;
+        $res = $this->qa_dao->update($qa);
+        foreach($qa["link_list"] as $link){
+            $link["id"] = $qa["id"];
+            $ret = $this->link_dao->insert($link);
+            if($ret == false){
+               return $ret; 
+            }
+        }
+        return $res;
+    }
+
+    /**
+     * 論理削除を行います。
+     */
+    public function delete($request){
+        $res = $this->qa_dao->update($request);
+        return $res;
+    }
+
+    /**
+     * 検索条件に基づき、問題の一覧を取得します。
+     * @param search_cond 
+     */
+    public function get_qa_list($search_cond = array()){
+        $res_list = $this->qa_dao->get_qa_list($search_cond);
+        if(!$res_list){
+            trigger_error("failed get_qa_list");
+            return false;
+        }
+        foreach ($res_list as &$row) {
+            $ret = $this->link_dao->get_list(array("id"=>$row["id"])); 
+            foreach($ret as $id){
+                $qa = $this->qa_dao->get_qa($id["id"]); 
+                $row["link"][] = $qa; 
+            }
+        }
+        // echo"<pre>";print_r($res_list); echo"</pre>";
+        return array('list'=>$res_list);
+    }
+
+    public function get_dead_line_list($search_cond = array()){
+        $res_list = $this->qa_dao->get_dead_line_list($search_cond);
+        return array('list'=>$res_list);
+    }
+    
+    /**
+     * タスクIDからタスク情報を取得します。
+     * @param $id 
+     */
+    public function get_qa(array $request){
+        $qa = $this->qa_dao->get_qa($request['id']);
+        $link_list = $this->link_dao->get_list(array("id"=>$qa["id"])); 
+        foreach($link_list as $id){
+            $link_qa = $this->qa_dao->get_qa($id["id"]); 
+            $qa["link"][] = $link_qa; 
+        }
+        $tag_list = $this->tag_dao->get_tag_by_qaid($qa["id"]);
+        
+        // echo"<pre>";print_r($qa); echo"</pre>";
+        return $qa;
+    }
+
+    /**
+     * レコードエンティティからレコード情報を入力します
+     * @param array $qa レコードエンティティ
+     */
+    public function insert($qa){
+        $id = $this->qa_dao->insert($qa);
+        if ($id == false) {
+            return $id;
+        }
+        // save link
+        if (array_key_exists("link_list",  $qa)){
+            foreach($qa["link_list"] as $link){
+                $link["id"] = $id;
+                $ret = $this->link_dao->insert($link);
+                if($ret == false){
+                   return $ret; 
+                }
+            }
+        }
+        
+        // save tag
+        if (array_key_exists("tag_list",  $qa)){
+            foreach($qa["tag_list"] as $tag){
+                $tag["qa_id"] = $id;
+                $ret = $this->qa_tag_dao->insert($tag);
+                if($ret == false){
+                   return $ret; 
+                }
+            }
+        }
+        return $id;
+    }
+
+    public function get_category_list(){
+        $category_list = $this->qa_dao->get_category_list();
+        if ($category_list == false) {
+           trigger_error("can't get category_list", E_USER_NOTICE); 
+        }
+        return $category_list;
+    }
+ 
+    public function get_latest_src(){
+        $src = $this->qa_dao->get_latest_src();
+        if ($src === false) {
+           trigger_error("can't get latest_src src=" . var_export($src, true), E_USER_NOTICE); 
+        }
+        // print_r($src); exit;
+        return $src;
+    }
+    public function get_src_list(){
+        $src_list = $this->qa_dao->get_src_list();
+        if ($src_list == false) {
+           trigger_error("can't get src_list", E_USER_NOTICE); 
+        }
+        return $src_list;
+    }
+    
+    public function get_tag_list(){
+        $src_list = $this->tag_dao->get_tag_list();
+        if ($src_list == false) {
+           trigger_error("can't get tag_list", E_USER_NOTICE); 
+        }
+        return $src_list;
+    }
+
+    public function get_tag_list_as_id_val(){
+        $list = $this->get_tag_list();
+        $id_val = array();
+        foreach($list as $row){
+            $id_val[$row["id"]] = $row["title"];
+        }
+        return $id_val;
+    }
+    
+    public function uncorrect_change($id, $cnahge_cnt){
+        $qa = $this->qa_dao->get_qa($id);
+        $qa['uncorrect_cnt'] = $qa['uncorrect_cnt'] + $cnahge_cnt;
+        $rs = $this->qa_dao->update($qa);
+    }
+
+    public function correct_change($id, $cnahge_cnt){
+        $qa = $this->qa_dao->get_qa($id);
+        $qa['correct_cnt'] = $qa['correct_cnt'] + $cnahge_cnt;
+        $rs = $this->qa_dao->update($qa);
+    }
+    
+    /**
+     * CSV出力
+     */
+    public function export_qa(){
+        $qa_arr = $this->qa_dao->exp_csv_qa();
+        return $qa_arr ;
+    }
+
+    public function get_rates_by_category(){
+        $res1 = $this->qa_dao->get_rates_by_category();
+        $res2 = $this->qa_dao->get_noans_by_category();
+        foreach($res2 as $noans){
+            $map[$noans["category"]] = $noans["count"];
+        } 
+        $out = array();
+        foreach ($res1 as $cate) {
+            $cate["count_no_ans"] = $map[$cate["category"]];
+            $out[] = $cate;
+        }
+        return $out;
+    }
+
+    public function qa_manage_facade_imple(){
+        $this->qa_dao = new qa_dao() ;
+        $this->qa_tag_dao = new qa_tag_dao() ;
+        $this->tag_dao = new tag_dao() ;
+        $this->link_dao = new link_dao() ;
+    }
+}
+?>

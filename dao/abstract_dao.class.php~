@@ -1,0 +1,129 @@
+<?php
+include('./lib/adodb/adodb.inc.php');
+abstract class abstract_dao{
+
+    var $con ;
+
+    const VIEW_ENCODE = "UTF-8";
+    const DB_ENCODE = "EUC-JP";
+    const DB_ENCODE_WIN = "UTF-8";
+
+    function __construct(){
+        mb_internal_encoding("EUC-JP");
+        mb_detect_order("UTF-8,ASCII,EUC-JP,SJIS,eucJP-win,SJIS-win,JIS,ISO-2022-JP");
+        $this->con = ADONewConnection('mysql');
+        $this->debug = false;
+        if( $_SERVER['HTTP_HOST'] != 'localhost'){
+            $this->con->Connect();
+        }else{
+            $this->con->Connect('localhost','root','root','nsd99M5a');
+        }
+        $this->con->SetFetchMode(ADODB_FETCH_ASSOC);
+    }
+
+    /**
+     * データを取得する為のSQLを発行する
+     * （adodbのExcecuteをハックしている。）
+     *
+     * @param string $sql
+     * @param array $where_value
+     * @return array success : result_set クエリの結果データを保持した配列
+     *               error   : false
+     */
+    public function get($sql, $where_value = array()){
+        if (!is_null($where_value)) {
+            $where_value = $this->conv2db($where_value);
+        }
+        $where_value = array_change_key_case($where_value, CASE_UPPER);
+        $rs = $this->con->Execute($sql, $where_value);
+        if($rs){
+            $record_list = $rs->getrows();
+            $record_list = $this->conv2disp($record_list);
+            foreach($record_list as $key => $val){
+                $record_list[$key] =  array_change_key_case($val, CASE_LOWER);
+            }
+            return $record_list;
+        }else{
+            trigger_error('Error has happned when execute following sql ', E_USER_WARNING);
+            trigger_error($sql , E_USER_WARNING);
+            trigger_error(var_export($where_value, true) , E_USER_WARNING);
+            return $rs ;
+        }
+    }
+
+    /**
+     * 戻り値を求めないSQLを発行する。
+     * （adodbのExcecuteをハックしている。）
+     *
+     *  @param String $sql
+     *  @param array $where_value
+     */
+    public function execute( $sql, array $where_value = array() ){
+        $where_value = array_change_key_case($where_value, CASE_UPPER);
+        $rs = $this->con->Execute( $sql, $where_value );
+        if($rs){
+            return $rs;
+        }else{
+            trigger_error($sql, E_USER_NOTICE);
+            trigger_error($where_value, E_USER_NOTICE);
+            print('failuer');
+            return $rs ;
+        }
+    }
+
+    /**
+     * 1つのエンティティに対しての insert update を実行します。
+     * （adodbのAutoExcecuteをハックしている。）
+     *
+     * @param string $table エンティティ（テーブル名）
+     * @param array  $arrFields フィールド名
+     * @param string $mode 実行SQLの種類 INSERT or UPDATE
+     * @param string $where UPDATEの際の条件句。必要に応じてvalue値をescapeしてから引数として与えてください。
+     */
+    public function auto_execute( $table, array $arrFields, $mode, $where=false, $forceUpdate=true, $magicq=false ){
+        // trigger_error('--> start auto execute ', E_USER_NOTICE);
+        $arrFields = $this->conv2db($arrFields);
+        $arrFields = array_change_key_case($arrFields, CASE_UPPER);
+        $rs = $this->con->AutoExecute($table, $arrFields, strtoupper($mode), $where, $forceUpdate, $magicq);
+        if(!$rs){
+            trigger_error('ERROR HAS HAPPEND WHEN FOLLONWING SQL', E_USER_NOTICE);
+            trigger_error($mode, E_USER_NOTICE);
+            trigger_error($table, E_USER_NOTICE);
+            trigger_error($arrFields, E_USER_NOTICE);
+            trigger_error($where, E_USER_NOTICE);
+        }
+        return  $rs ;
+    }
+
+    private function conv2db(array $values){
+        foreach($values as $key => $val){
+            if(is_string($val)){
+                // echo $val . ":"; echo mb_detect_encoding($val); echo "<br/>";
+                $str = str_replace('\\"','"',$val);
+                if($_SERVER['HTTP_HOST'] != 'localhost'){
+                    $str = mb_convert_encoding($str, self::DB_ENCODE, mb_detect_encoding($val)); 
+                } else {
+                    $str = mb_convert_encoding($str, self::DB_ENCODE_WIN, mb_detect_encoding($val)); 
+                }
+                $values[$key] = $str;
+            }
+        }
+        return $values;
+    }
+
+    /**
+     * @param array $value_list
+     * @return unknown_type
+     */
+    private function conv2disp(array $value_list){
+        foreach($value_list as &$values ){
+            foreach($values as $key => $val){
+                // echo $val . ":"; echo mb_detect_encoding($val); echo "<br/>";
+                $str = mb_convert_encoding($val, self::VIEW_ENCODE, mb_detect_encoding($val)); 
+                $values[$key] = $str;
+            }
+        }
+        return $value_list;
+    }
+}
+?>
